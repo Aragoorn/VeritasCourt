@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: veritas-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: veritas
+      POSTGRES_PASSWORD: veritas123
+      POSTGRES_DB: veritas
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: veritas-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://veritas:veritas123@postgres:5432/veritas?schema=public
+      JWT_SECRET: veritas-super-secret-change-me
+      JWT_EXPIRES_IN: 7d
+      PORT: 3001
+      GENLAYER_CONTRACT_ADDRESS: ${GENLAYER_CONTRACT_ADDRESS:-}
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: veritas-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+
+volumes:
+  postgres_data:
