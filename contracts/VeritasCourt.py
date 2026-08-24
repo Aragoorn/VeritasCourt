@@ -66,12 +66,11 @@ class TemplateAdded(gl.Event):
 class HumanVoteCast(gl.Event):
     def __init__(self, claim_id: u256, voter: str, vote: str, /): ...
 
+
 class VeritasCourt(gl.Contract):
     """
-    Veritas Court v4.1.1 – Full Enterprise AI + Hybrid Court
-    Based on original v4.0.0 with surgical safety fixes only.
-    Escrow/stake value is recorded on-chain; actual token movement
-    is handled by the external Settlement layer.
+    Veritas Court v4.1.2 – Full Enterprise AI + Hybrid Court
+    Fixed: do NOT reassign TreeMap storage in __init__
     """
 
     # ==================== Storage ====================
@@ -127,50 +126,25 @@ class VeritasCourt(gl.Contract):
     appeal_stakers: TreeMap[u256, str]
     claim_callbacks: TreeMap[u256, str]
     human_votes: TreeMap[u256, str]
-    withdrawn_stakes: TreeMap[u256, str]  # claim_id -> json
+    withdrawn_stakes: TreeMap[u256, str]
 
     def __init__(self):
+        # IMPORTANT: never do self.claims = TreeMap[...]()
+        # Storage maps are auto-initialized by GenLayer
+
         self.claim_counter = u256(0)
-        self.claims = TreeMap[u256, str]()
-        self.resolutions = TreeMap[u256, str]()
-        self.challenges = TreeMap[u256, str]()
-        self.appeals = TreeMap[u256, str]()
-        self.history = TreeMap[u256, str]()
-        self.normalized_evidence = TreeMap[u256, str]()
-        self.evidence_hashes = TreeMap[u256, str]()
-        self.claim_parties = TreeMap[u256, str]()
-        self.escrows = TreeMap[u256, u256]()
-        self.escrow_beneficiaries = TreeMap[u256, str]()
-        self.escrow_released = TreeMap[u256, bool]()
-        self.human_votes = TreeMap[u256, str]()
-        self.withdrawn_stakes = TreeMap[u256, str]()
 
         sender = str(gl.message.sender_address)
         self.owner = sender
         self.pending_owner = ""
-        self.resolvers = TreeMap[str, bool]()
-        self.admins = TreeMap[str, bool]()
-        self.senior_resolvers = TreeMap[str, bool]()
+
         self.resolvers[sender] = True
         self.admins[sender] = True
         self.senior_resolvers[sender] = True
-
-        self.reputation = TreeMap[str, u256]()
-        self.resolver_stake = TreeMap[str, u256]()
         self.reputation[sender] = u256(8500)
 
-        self.claims_per_address = TreeMap[str, u256]()
-        self.last_claim_ts = TreeMap[str, u256]()
-        self.challenge_stakes = TreeMap[u256, u256]()
-        self.challenge_stakers = TreeMap[u256, str]()
-        self.appeal_stakes = TreeMap[u256, u256]()
-        self.appeal_stakers = TreeMap[u256, str]()
-        self.templates = TreeMap[str, str]()
-        self.oracle_whitelist = TreeMap[str, bool]()
-        self.claim_callbacks = TreeMap[u256, str]()
-
         self.paused = False
-        self.contract_version = "4.1.1"
+        self.contract_version = "4.1.2"
         self.max_claims_per_window = u256(20)
         self.claim_window_seconds = u256(86400)
         self.min_challenge_stake = u256(10**17)
@@ -236,7 +210,6 @@ class VeritasCourt(gl.Contract):
         assert self.resolvers.get(sender, False) or sender == self.owner, "Only resolver"
 
     def _can_resolve(self):
-        # Hybrid-friendly: resolver OR admin OR owner
         sender = str(gl.message.sender_address)
         assert (
             self.resolvers.get(sender, False)
@@ -309,7 +282,6 @@ class VeritasCourt(gl.Contract):
             net = amount - (amount * self.protocol_fee_bps // u256(10000))
             self.escrow_released[claim_id] = True
             EscrowMarkedReleased(claim_id, beneficiary, net).emit()
-        # Actual token transfer is done by Settlement layer listening to this event
 
     def _clear_map_str(self, m: TreeMap[u256, str], key: u256):
         m[key] = ""
@@ -721,7 +693,7 @@ OVERALL EVIDENCE CREDIBILITY: {overall_credibility}/100
         hist = self._safe_loads(self.history.get(claim_id, "[]"), [])
         hist.append(resolution)
         if len(hist) > int(self.history_limit):
-            hist = hist[-int(self.history_limit) :]
+            hist = hist[-int(self.history_limit):]
         self.history[claim_id] = json.dumps(hist, sort_keys=True)
 
         claim["status"] = "resolved"
@@ -730,7 +702,6 @@ OVERALL EVIDENCE CREDIBILITY: {overall_credibility}/100
         claim["appeal_deadline"] = 0
         self.claims[claim_id] = json.dumps(claim, sort_keys=True)
 
-        # Safe clear (no del)
         self._clear_map_str(self.challenges, claim_id)
         self._clear_map_str(self.appeals, claim_id)
 
@@ -852,9 +823,6 @@ OVERALL EVIDENCE CREDIBILITY: {overall_credibility}/100
 
     @gl.public.write
     def withdraw_stake(self, claim_id: u256, stake_type: str = "challenge") -> str:
-        """
-        Marks stake as withdrawn. Actual token return is handled by Settlement layer.
-        """
         sender = str(gl.message.sender_address)
         claim = self._get_claim_or_revert(claim_id)
         assert claim.get("finalized") or claim.get("archived"), "Not finalized/archived"
