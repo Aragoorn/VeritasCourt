@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  COMPANY_ADMIN
+  COMPANY_USER
+  HUMAN_REVIEWER
+  CLAIMANT
+}
+
+enum ClaimStatus {
+  DRAFT
+  SUBMITTED
+  AI_REVIEWING
+  AI_RESOLVED
+  CHALLENGED
+  APPEALED
+  HUMAN_REVIEW
+  FINALIZED
+  REJECTED
+  ARCHIVED
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  passwordHash  String
+  name          String?
+  role          UserRole      @default(CLAIMANT)
+  companyId     String?
+  company       Company?      @relation(fields: [companyId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  claimsCreated Claim[]       @relation("ClaimCreator")
+  reviews       HumanReview[]
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  apiKey      String   @unique @default(cuid())
+  webhookUrl  String?
+  users       User[]
+  claims      Claim[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Claim {
+  id              String         @id @default(cuid())
+  externalId      String?
+  title           String
+  description     String
+  status          ClaimStatus    @default(DRAFT)
+  genlayerClaimId String?
+  companyId       String
+  company         Company        @relation(fields: [companyId], references: [id])
+  creatorId       String
+  creator         User           @relation("ClaimCreator", fields: [creatorId], references: [id])
+
+  evidence        Evidence[]
+  aiResolution    AiResolution?
+  humanReviews    HumanReview[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Evidence {
+  id          String   @id @default(cuid())
+  claimId     String
+  claim       Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  url         String
+  ipfsHash    String?
+  fileName    String?
+  mimeType    String?
+  uploadedBy  String
+  createdAt   DateTime @default(now())
+}
+
+model AiResolution {
+  id             String   @id @default(cuid())
+  claimId        String   @unique
+  claim          Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  decision       String
+  confidence     Int
+  reasoning      String?
+  isReassessment Boolean  @default(false)
+  rawResponse    Json?
+  createdAt      DateTime @default(now())
+}
+
+model HumanReview {
+  id         String   @id @default(cuid())
+  claimId    String
+  claim      Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  reviewerId String
+  reviewer   User     @relation(fields: [reviewerId], references: [id])
+  decision   String
+  note       String?
+  createdAt  DateTime @default(now())
+}
