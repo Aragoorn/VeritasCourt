@@ -1,6 +1,9 @@
 Veritas Court v4.0.0  
 Ultimate Enterprise AI + Hybrid Court on GenLayer
 
+## contract address:0x6957547405946Cf52A15948fBDB345B6DC4539aB
+https://explorer-studio.genlayer.com/address/0x6957547405946Cf52A15948fBDB345B6DC4539aB
+
 1. Project Overview
 
 Veritas Court is a production-ready, enterprise-grade intelligent contract built on GenLayer. It functions as a transparent, AI-powered first-instance court with optional human hybrid jury support.
