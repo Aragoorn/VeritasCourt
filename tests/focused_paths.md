@@ -32,3 +32,5 @@ These tests demonstrate that every path requested by the steward completes succe
 - [ ] add_resolver(non-owner)
 - [ ] resolve without stake → fails
 - [ ] stake_as_resolver (≥ min) → resolve succeeds
+
+set-config : {"min_challenge_stake":1,"min_appeal_stake":1,"min_resolver_stake":1}
