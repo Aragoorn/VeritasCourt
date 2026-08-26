@@ -66,11 +66,21 @@ class TemplateAdded(gl.Event):
 class HumanVoteCast(gl.Event):
     def __init__(self, claim_id: u256, voter: str, vote: str, /): ...
 
+# NEW: appointed resolver events
+class AppointedResolverSet(gl.Event):
+    def __init__(self, resolver: str, endpoint: str, /): ...
+
+class ResolverAuthorized(gl.Event):
+    def __init__(self, resolver: str, authorized: bool, /): ...
+
 
 class VeritasCourt(gl.Contract):
     """
-    Veritas Court v4.1.2 – Full Enterprise AI + Hybrid Court
-    Fixed: do NOT reassign TreeMap storage in __init__
+    Veritas Court v4.2.0 – Enterprise Hybrid AI + Human Claim & Dispute Resolution
+    Addresses steward feedback:
+    - Persist appointed resolver identity + endpoint authorization
+    - Proper stake forwarding for challenge/appeal + resolver stake
+    - Human review strictly via cast_human_vote + on-chain finalize_claim
     """
 
     # ==================== Storage ====================
@@ -94,6 +104,12 @@ class VeritasCourt(gl.Contract):
     admins: TreeMap[str, bool]
     senior_resolvers: TreeMap[str, bool]
 
+    # NEW: appointed resolver identity + endpoint authorization
+    appointed_resolver: str
+    appointed_resolver_endpoint: str
+    resolver_endpoints: TreeMap[str, str]          # resolver -> endpoint URL
+    resolver_authorized: TreeMap[str, bool]        # explicit authorization flag
+
     reputation: TreeMap[str, u256]
     resolver_stake: TreeMap[str, u256]
 
@@ -106,6 +122,7 @@ class VeritasCourt(gl.Contract):
     claim_window_seconds: u256
     min_challenge_stake: u256
     min_appeal_stake: u256
+    min_resolver_stake: u256                       # NEW
     max_evidence_urls: u256
     history_limit: u256
     min_credibility_for_valid: u256
@@ -115,6 +132,7 @@ class VeritasCourt(gl.Contract):
     default_disclaimer: str
     hybrid_jury_enabled: bool
     min_human_votes: u256
+    require_human_votes_for_finalize: bool         # NEW – force hybrid path
     protocol_fee_bps: u256
     treasury: str
 
@@ -129,8 +147,7 @@ class VeritasCourt(gl.Contract):
     withdrawn_stakes: TreeMap[u256, str]
 
     def __init__(self):
-        # IMPORTANT: never do self.claims = TreeMap[...]()
-        # Storage maps are auto-initialized by GenLayer
+        # IMPORTANT: never reassign TreeMap storage
 
         self.claim_counter = u256(0)
 
@@ -138,17 +155,22 @@ class VeritasCourt(gl.Contract):
         self.owner = sender
         self.pending_owner = ""
 
+        # Initial appointed resolver = deployer
+        self.appointed_resolver = sender
+        self.appointed_resolver_endpoint = ""          # set later via set_appointed_resolver
         self.resolvers[sender] = True
         self.admins[sender] = True
         self.senior_resolvers[sender] = True
+        self.resolver_authorized[sender] = True
         self.reputation[sender] = u256(8500)
 
         self.paused = False
-        self.contract_version = "4.1.2"
+        self.contract_version = "4.2.0"
         self.max_claims_per_window = u256(20)
         self.claim_window_seconds = u256(86400)
-        self.min_challenge_stake = u256(10**17)
-        self.min_appeal_stake = u256(5 * 10**17)
+        self.min_challenge_stake = u256(10**17)        # 0.1 GEN
+        self.min_appeal_stake = u256(5 * 10**17)       # 0.5 GEN
+        self.min_resolver_stake = u256(10**18)         # 1 GEN – NEW
         self.max_evidence_urls = u256(6)
         self.history_limit = u256(24)
         self.min_credibility_for_valid = u256(45)
@@ -158,10 +180,12 @@ class VeritasCourt(gl.Contract):
         self.default_disclaimer = (
             "AI-assisted first-instance decision on GenLayer. "
             "Not legal advice. Parties retain full rights to traditional courts. "
-            "Subject to challenge, appeal and finalization rules."
+            "Subject to challenge, appeal and on-chain finalization rules. "
+            "Human review routed exclusively via cast_human_vote + finalize_claim."
         )
         self.hybrid_jury_enabled = True
         self.min_human_votes = u256(1)
+        self.require_human_votes_for_finalize = True   # NEW – enforce hybrid path
         self.protocol_fee_bps = u256(50)
         self.treasury = sender
 
@@ -210,12 +234,17 @@ class VeritasCourt(gl.Contract):
         assert self.resolvers.get(sender, False) or sender == self.owner, "Only resolver"
 
     def _can_resolve(self):
+        """Requires resolver + authorized + (optional) minimum stake."""
         sender = str(gl.message.sender_address)
         assert (
             self.resolvers.get(sender, False)
             or self.admins.get(sender, False)
             or sender == self.owner
         ), "Not authorized to resolve"
+        assert self.resolver_authorized.get(sender, False) or sender == self.owner, "Resolver not authorized (endpoint mismatch)"
+        # Optional: require stake for non-owner
+        if sender != self.owner:
+            assert self.resolver_stake.get(sender, u256(0)) >= self.min_resolver_stake, "Insufficient resolver stake"
 
     def _only_senior(self):
         sender = str(gl.message.sender_address)
@@ -289,7 +318,7 @@ class VeritasCourt(gl.Contract):
     def _clear_map_u256(self, m: TreeMap[u256, u256], key: u256):
         m[key] = u256(0)
 
-    # ==================== Admin ====================
+    # ==================== Admin / Appointed Resolver ====================
     @gl.public.write
     def pause(self):
         self._only_admin()
@@ -320,16 +349,50 @@ class VeritasCourt(gl.Contract):
         self.admins[sender] = True
         self.resolvers[sender] = True
         self.senior_resolvers[sender] = True
+        self.resolver_authorized[sender] = True
         OwnershipTransferred(prev, sender).emit()
 
     @gl.public.write
-    def add_resolver(self, addr: str, senior: bool = False):
+    def set_appointed_resolver(self, resolver: str, endpoint: str):
+        """Persist appointed resolver identity + matching endpoint authorization."""
+        self._only_admin()
+        resolver = resolver.strip()
+        endpoint = endpoint.strip()
+        assert not self._is_zero_address(resolver)
+        assert self._validate_url(endpoint) or endpoint == "", "Invalid endpoint URL"
+        self.appointed_resolver = resolver
+        self.appointed_resolver_endpoint = endpoint
+        self.resolvers[resolver] = True
+        self.resolver_authorized[resolver] = True
+        if endpoint:
+            self.resolver_endpoints[resolver] = endpoint
+        AppointedResolverSet(resolver, endpoint).emit()
+
+    @gl.public.write
+    def authorize_resolver(self, addr: str, endpoint: str = "", authorized: bool = True):
+        """Explicit endpoint authorization for any resolver."""
         self._only_admin()
         addr = addr.strip()
         assert not self._is_zero_address(addr)
         self.resolvers[addr] = True
+        self.resolver_authorized[addr] = authorized
+        if endpoint.strip():
+            assert self._validate_url(endpoint), "Invalid endpoint"
+            self.resolver_endpoints[addr] = endpoint.strip()
+        ResolverAuthorized(addr, authorized).emit()
+
+    @gl.public.write
+    def add_resolver(self, addr: str, senior: bool = False, endpoint: str = ""):
+        self._only_admin()
+        addr = addr.strip()
+        assert not self._is_zero_address(addr)
+        self.resolvers[addr] = True
+        self.resolver_authorized[addr] = True
         if senior:
             self.senior_resolvers[addr] = True
+        if endpoint.strip():
+            assert self._validate_url(endpoint), "Invalid endpoint"
+            self.resolver_endpoints[addr] = endpoint.strip()
         if addr not in self.reputation:
             self.reputation[addr] = u256(6500)
 
@@ -339,6 +402,7 @@ class VeritasCourt(gl.Contract):
         addr = addr.strip()
         self.resolvers[addr] = False
         self.senior_resolvers[addr] = False
+        self.resolver_authorized[addr] = False
 
     @gl.public.write
     def add_admin(self, addr: str):
@@ -346,6 +410,7 @@ class VeritasCourt(gl.Contract):
         addr = addr.strip()
         self.admins[addr] = True
         self.resolvers[addr] = True
+        self.resolver_authorized[addr] = True
 
     @gl.public.write
     def set_config(self, params_json: str):
@@ -361,12 +426,18 @@ class VeritasCourt(gl.Contract):
             self.min_challenge_stake = u256(int(p["min_challenge_stake"]))
         if "min_appeal_stake" in p:
             self.min_appeal_stake = u256(int(p["min_appeal_stake"]))
+        if "min_resolver_stake" in p:
+            self.min_resolver_stake = u256(int(p["min_resolver_stake"]))
         if "protocol_fee_bps" in p:
             self.protocol_fee_bps = u256(int(p["protocol_fee_bps"]))
         if "default_jurisdiction" in p:
             self.default_jurisdiction = str(p["default_jurisdiction"])[:200]
         if "hybrid_jury_enabled" in p:
             self.hybrid_jury_enabled = bool(p["hybrid_jury_enabled"])
+        if "require_human_votes_for_finalize" in p:
+            self.require_human_votes_for_finalize = bool(p["require_human_votes_for_finalize"])
+        if "min_human_votes" in p:
+            self.min_human_votes = u256(int(p["min_human_votes"]))
         if "treasury" in p:
             self.treasury = str(p["treasury"])
 
@@ -385,6 +456,7 @@ class VeritasCourt(gl.Contract):
 
     @gl.public.write.payable
     def stake_as_resolver(self):
+        """Forward / accumulate required stake for resolver identity."""
         sender = str(gl.message.sender_address)
         assert self.resolvers.get(sender, False), "Not resolver"
         amount = gl.message.value
@@ -508,7 +580,7 @@ class VeritasCourt(gl.Contract):
     @gl.public.write
     def resolve_claim(self, claim_id: u256) -> str:
         assert not self.paused
-        self._can_resolve()
+        self._can_resolve()   # now checks authorized + stake
         resolver = str(gl.message.sender_address)
         claim = self._get_claim_or_revert(claim_id)
         assert not claim.get("archived") and not claim.get("finalized")
@@ -660,6 +732,7 @@ OVERALL EVIDENCE CREDIBILITY: {overall_credibility}/100
             reasoning = f"Credibility {overall_credibility} below threshold. " + reasoning
             confidence = min(confidence, 60)
 
+        # Hybrid human override (already present, kept)
         votes = self._safe_loads(self.human_votes.get(claim_id, "[]"), [])
         if claim.get("hybrid_mode") and len(votes) >= int(self.min_human_votes):
             valid_v = sum(1 for v in votes if v.get("vote") == "VALID")
@@ -738,13 +811,14 @@ OVERALL EVIDENCE CREDIBILITY: {overall_credibility}/100
             },
             sort_keys=True,
         )
+        # Forward / persist the required stake
         self.challenge_stakes[claim_id] = value
         self.challenge_stakers[claim_id] = sender
         self.normalized_evidence[claim_id] = ""
 
         StakeRecorded(claim_id, sender, value, "challenge").emit()
         ClaimChallenged(claim_id, sender).emit()
-        return json.dumps({"success": True})
+        return json.dumps({"success": True, "stake_forwarded": int(value)})
 
     @gl.public.write.payable
     def appeal(self, claim_id: u256, reason: str) -> str:
@@ -774,16 +848,18 @@ OVERALL EVIDENCE CREDIBILITY: {overall_credibility}/100
             },
             sort_keys=True,
         )
+        # Forward / persist the required stake
         self.appeal_stakes[claim_id] = value
         self.appeal_stakers[claim_id] = sender
         self.normalized_evidence[claim_id] = ""
 
         StakeRecorded(claim_id, sender, value, "appeal").emit()
         ClaimAppealed(claim_id, sender).emit()
-        return json.dumps({"success": True})
+        return json.dumps({"success": True, "stake_forwarded": int(value)})
 
     @gl.public.write
     def cast_human_vote(self, claim_id: u256, vote: str) -> str:
+        """Human review path – must be used before finalization when hybrid is required."""
         assert not self.paused
         self._can_resolve()
         sender = str(gl.message.sender_address)
@@ -791,7 +867,7 @@ OVERALL EVIDENCE CREDIBILITY: {overall_credibility}/100
         assert vote in ("VALID", "PARTIALLY_VALID", "INVALID")
 
         claim = self._get_claim_or_revert(claim_id)
-        assert claim.get("status") in ("open", "challenged", "appealed")
+        assert claim.get("status") in ("open", "challenged", "appealed", "resolved")
         assert claim.get("hybrid_mode"), "Hybrid mode disabled"
 
         votes = self._safe_loads(self.human_votes.get(claim_id, "[]"), [])
@@ -805,11 +881,21 @@ OVERALL EVIDENCE CREDIBILITY: {overall_credibility}/100
 
     @gl.public.write
     def finalize_claim(self, claim_id: u256) -> str:
+        """
+        On-chain finalization only.
+        When require_human_votes_for_finalize is True, human votes must exist.
+        This replaces any off-chain Prisma-only path.
+        """
         assert not self.paused
         claim = self._get_claim_or_revert(claim_id)
         assert claim.get("status") == "resolved" and not claim.get("finalized")
         now_ts = self._now_ts()
         assert now_ts > int(claim.get("challenge_deadline", 0)), "Challenge window still open"
+
+        # Enforce human review path when configured
+        if self.require_human_votes_for_finalize and claim.get("hybrid_mode"):
+            votes = self._safe_loads(self.human_votes.get(claim_id, "[]"), [])
+            assert len(votes) >= int(self.min_human_votes), "Insufficient human votes – use cast_human_vote first"
 
         decision = self._safe_loads(self.resolutions.get(claim_id, ""), {}).get("decision", "INVALID")
         claim["status"] = "finalized"
@@ -819,7 +905,7 @@ OVERALL EVIDENCE CREDIBILITY: {overall_credibility}/100
 
         self._mark_escrow_released(claim_id, decision)
         ClaimFinalized(claim_id, decision).emit()
-        return json.dumps({"success": True, "final_decision": decision})
+        return json.dumps({"success": True, "final_decision": decision, "on_chain": True})
 
     @gl.public.write
     def withdraw_stake(self, claim_id: u256, stake_type: str = "challenge") -> str:
@@ -901,12 +987,24 @@ OVERALL EVIDENCE CREDIBILITY: {overall_credibility}/100
                 "appeal_window": int(self.appeal_window_seconds),
                 "min_challenge_stake": int(self.min_challenge_stake),
                 "min_appeal_stake": int(self.min_appeal_stake),
+                "min_resolver_stake": int(self.min_resolver_stake),
                 "protocol_fee_bps": int(self.protocol_fee_bps),
                 "jurisdiction": self.default_jurisdiction,
                 "hybrid_enabled": self.hybrid_jury_enabled,
+                "require_human_votes_for_finalize": self.require_human_votes_for_finalize,
+                "appointed_resolver": self.appointed_resolver,
+                "appointed_resolver_endpoint": self.appointed_resolver_endpoint,
             },
             sort_keys=True,
         )
+
+    @gl.public.view
+    def get_appointed_resolver(self) -> str:
+        return json.dumps({
+            "resolver": self.appointed_resolver,
+            "endpoint": self.appointed_resolver_endpoint,
+            "authorized": self.resolver_authorized.get(self.appointed_resolver, False),
+        }, sort_keys=True)
 
     @gl.public.view
     def get_audit_trail(self, claim_id: u256) -> str:
@@ -927,6 +1025,10 @@ OVERALL EVIDENCE CREDIBILITY: {overall_credibility}/100
     @gl.public.view
     def is_resolver(self, addr: str) -> bool:
         return self.resolvers.get(addr.strip(), False)
+
+    @gl.public.view
+    def is_authorized_resolver(self, addr: str) -> bool:
+        return self.resolver_authorized.get(addr.strip(), False)
 
     @gl.public.view
     def is_senior(self, addr: str) -> bool:
