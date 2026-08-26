@@ -1,10 +1,43 @@
 Veritas Court v4.0.0  
 Ultimate Enterprise AI + Hybrid Court on GenLayer
 
+## 
+# Focused path tests against VeritasCourt.py (run in GenLayer Studio / local GenVM)
+
+def test_path_appointed_resolver():
+    # 1. deploy
+    # 2. call set_appointed_resolver(addr, "https://resolver.example.com/api")
+    # 3. assert get_appointed_resolver() shows correct identity + endpoint
+    # 4. assert is_authorized_resolver(addr) == True
+
+def test_path_challenge_stake_forward():
+    # create_claim → resolve_claim → challenge(with value >= min_challenge_stake)
+    # assert challenge_stakes[claim_id] == value
+    # assert StakeRecorded emitted
+
+def test_path_appeal_stake_forward():
+    # similar for appeal
+
+def test_path_human_vote_then_finalize():
+    # create_claim (hybrid=True)
+    # resolve_claim
+    # cast_human_vote("VALID")
+    # wait past challenge_deadline (or mock time)
+    # finalize_claim → must succeed and return on_chain=True
+    # if require_human_votes_for_finalize=True and no votes → must revert
+
+def test_path_resolver_stake_required():
+    # add_resolver(non_owner)
+    # try resolve_claim without stake → should fail
+    # stake_as_resolver(value >= min_resolver_stake)
+    # resolve_claim → succeeds
+
+##
+
 1. Project Overview
 
-## contract address : 0x6957547405946Cf52A15948fBDB345B6DC4539aB
-https://explorer-studio.genlayer.com/address/0x6957547405946Cf52A15948fBDB345B6DC4539aB
+## contract address : 0xE5b1293B4bf1E326255123a9D06DC0c79020D269
+https://explorer-studio.genlayer.com/address/0xE5b1293B4bf1E326255123a9D06DC0c79020D269
 
 Veritas Court is a production-ready, enterprise-grade intelligent contract built on GenLayer. It functions as a transparent, AI-powered first-instance court with optional human hybrid jury support.
 
