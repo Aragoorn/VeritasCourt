@@ -779,7 +779,14 @@ OVERALL EVIDENCE CREDIBILITY: {overall_credibility}/100
         self._clear_map_str(self.appeals, claim_id)
 
         self._update_reputation(resolver, +15)
-        ClaimResolved(claim_id, decision, u256(confidence), resolver).emit()
+
+        # Temporary safer emit to avoid "inval" encoding error
+        try:
+            ClaimResolved(claim_id, str(decision)[:32], u256(int(confidence)), str(resolver)).emit()
+        except Exception:
+            # Fallback: emit with minimal data if full event fails
+            ClaimResolved(claim_id, "INVALID", u256(0), str(resolver)[:42]).emit()
+
         return json.dumps(resolution, sort_keys=True)
 
     # ==================== Challenge & Appeal ====================
