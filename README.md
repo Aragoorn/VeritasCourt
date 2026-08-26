@@ -173,7 +173,7 @@ These tests demonstrate that every path requested by the steward completes succe
 
 1. Open [GenLayer Studio](https://studio.genlayer.com)
 2. Create a new project or open an existing one
-3. Paste the full `VeritasCourt.py` (v4.2.0) and **Deploy**
+3. Paste the full `VeritasCourt.py` (v4.0.0) and **Deploy**
 4. Execute the following calls in order:
 
 | Step | Function                    | Notes / Parameters                                      |
