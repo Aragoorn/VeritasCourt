@@ -1,6 +1,8 @@
 # Focused Path Tests – VeritasCourt.py v4.0.0
 
 These tests demonstrate that every path requested by the steward completes successfully.
+**Full executable test suite:**  
+[tests/test_veritas_paths.py](https://github.com/Aragoorn/VeritasCourt/blob/main/tests/test_veritas_paths.py)
 
 ### 1. Appointed Resolver + Endpoint Authorization
 - [ ] Deploy contract
