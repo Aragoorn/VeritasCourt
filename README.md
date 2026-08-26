@@ -3,8 +3,8 @@ Enterprise Hybrid AI + Human Claim & Dispute Resolution on GenLayer
 **Focused Path Tests:** [tests/test_veritas_paths.py](https://github.com/Aragoorn/VeritasCourt/blob/main/tests/test_veritas_paths.py)
 **Status:** Production-ready · Addresses full Steward feedback (Aug 2026)  
 **Contract Source:** [`https://github.com/Aragoorn/VeritasCourt/blob/main/contracts/VeritasCourt.py`](https://github.com/Aragoorn/VeritasCourt/blob/main/contracts/VeritasCourt.py)  
-**Deployed Address:** [`0xE5b1293B4bf1E326255123a9D06DC0c79020D269`](https://explorer-studio.genlayer.com/address/0xE5b1293B4bf1E326255123a9D06DC0c79020D269)
-https://explorer-studio.genlayer.com/address/0xE5b1293B4bf1E326255123a9D06DC0c79020D269
+**Deployed Address:** [`0xb040060c9C0DAb023ecEC11361D05DB1e0D209b0`](https://explorer-studio.genlayer.com/address/0xb040060c9C0DAb023ecEC11361D05DB1e0D209b0)
+https://explorer-studio.genlayer.com/address/0xb040060c9C0DAb023ecEC11361D05DB1e0D209b0
 
 ---
 
