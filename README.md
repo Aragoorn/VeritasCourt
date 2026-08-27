@@ -4,6 +4,7 @@ Enterprise Hybrid AI + Human Claim & Dispute Resolution on GenLayer
 **Status:** Production-ready · Fully addresses Steward feedback (Aug 2026)  
 **Contract Source:** [`contracts/VeritasCourt.py`](./contracts/VeritasCourt.py)  
 **Focused Tests:** [`tests/test_veritas_paths.py`](./tests/test_veritas_paths.py)
+
 **Contract Address:**[`0x7AcA451b2bfA278BDd9298c77aA929e1360Cc679`](https://explorer-studio.genlayer.com/address/0x7AcA451b2bfA278BDd9298c77aA929e1360Cc679)
 
 ---
