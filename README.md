@@ -1,52 +1,45 @@
-# Veritas Court v4.0.0
+# Veritas Court v4.4.0
 Enterprise Hybrid AI + Human Claim & Dispute Resolution on GenLayer
-**Focused Path Tests:** [tests/test_veritas_paths.py](https://github.com/Aragoorn/VeritasCourt/blob/main/tests/test_veritas_paths.py)
-**Status:** Production-ready · Addresses full Steward feedback (Aug 2026)  
-**Contract Source:** [`https://github.com/Aragoorn/VeritasCourt/blob/main/contracts/VeritasCourt.py`](https://github.com/Aragoorn/VeritasCourt/blob/main/contracts/VeritasCourt.py)  
-**Deployed Address:** [`0xb040060c9C0DAb023ecEC11361D05DB1e0D209b0`](https://explorer-studio.genlayer.com/address/0xb040060c9C0DAb023ecEC11361D05DB1e0D209b0)
-https://explorer-studio.genlayer.com/address/0xb040060c9C0DAb023ecEC11361D05DB1e0D209b0
+
+**Status:** Production-ready · Fully addresses Steward feedback (Aug 2026)  
+**Contract Source:** [`contracts/VeritasCourt.py`](./contracts/VeritasCourt.py)  
+**Focused Tests:** [`tests/test_veritas_paths.py`](./tests/test_veritas_paths.py)
+**Contract Address:**[`0x7AcA451b2bfA278BDd9298c77aA929e1360Cc679`](https://explorer-studio.genlayer.com/address/0x7AcA451b2bfA278BDd9298c77aA929e1360Cc679)
 
 ---
 
-## Steward Feedback Compliance (v4.0.0)
+## (v4.4.0)
 
-This release fully implements the steward requests:
 
 1. **Appointed resolver identity + matching endpoint authorization**  
-   - Persistent storage: `appointed_resolver`, `appointed_resolver_endpoint`, `resolver_endpoints`, `resolver_authorized`  
-   - Functions: `set_appointed_resolver(resolver, endpoint)`, `authorize_resolver(...)`  
-   - `_can_resolve()` enforces authorization + minimum resolver stake
+   - Persistent non-ephemeral storage: `appointed_resolver`, `appointed_resolver_endpoint`, `resolver_endpoints`, `resolver_authorized`, `appointed_resolver_set`  
+   - `set_appointed_resolver(resolver, endpoint)` requires a valid non-empty HTTPS endpoint  
+   - `_can_resolve()` blocks all resolution until the appointed resolver is properly set and authorized
 
 2. **Required stake forwarding for challenge & appeal**  
-   - Challenge / appeal require and persist `min_challenge_stake` / `min_appeal_stake`  
-   - New `min_resolver_stake` enforced on resolve path  
-   - Stakes recorded on-chain + `StakeRecorded` events
+   - Hard floor on `min_challenge_stake` and `min_appeal_stake` (cannot be set to zero)  
+   - Multiple asserts: `value > 0` + `value >= min_*`  
+   - Stakes are persisted on-chain and emit `StakeRecorded`  
+   - `min_resolver_stake` enforced for non-owner resolvers
 
 3. **Human review routed exclusively through `cast_human_vote` + on-chain finalization**  
-   - Config flag `require_human_votes_for_finalize` (default `true`)  
-   - `finalize_claim` requires sufficient human votes when hybrid mode is active  
-   - No off-chain (Prisma-only) finalization path remains
+   - `require_human_votes_for_finalize = true` by default  
+   - `finalize_claim` **reverts** if insufficient human votes exist  
+   - Explicit return fields: `"on_chain": true`, `"prisma_path_used": false`  
+   - No off-chain / Prisma finalization path remains
 
-4. **Focused path tests** included (see below)
+4. **Focused path tests** included in `/tests`
 
 ---
 
 ## 1. Project Overview
 
 Veritas Court is a production-ready, enterprise-grade Intelligent Contract built on GenLayer.  
-It acts as a transparent, AI-powered first-instance court with optional human hybrid jury support.
+It functions as a transparent, AI-powered first-instance court with mandatory hybrid human jury support when enabled.
 
-It is designed for organizations that need fast, auditable, and challengeable resolution of:
+Designed for organizations that need fast, auditable, and challengeable resolution of commercial disputes, insurance claims, supply-chain issues, SaaS SLA breaches, employment matters, IP conflicts, and other B2B claims.
 
-- Commercial disputes  
-- Insurance claims  
-- Supply-chain issues  
-- SaaS / SLA breaches  
-- Employment matters  
-- IP / Copyright conflicts  
-- Other B2B claims
-
-**Current Version:** 4.0.0  
+**Current Version:** 4.4.0  
 **Status:** Investment-ready and suitable for real organizational deployment.
 
 ---
@@ -54,7 +47,7 @@ It is designed for organizations that need fast, auditable, and challengeable re
 ## 2. Core Features
 
 ### 2.1 Claim Management
-- Full multi-party support (Plaintiff + Defendant + observers)
+- Full multi-party support (Plaintiff + Defendant)
 - External ID for ERP / CRM integration
 - Pre-built industry templates (General, Insurance, Supply Chain, SaaS SLA, Employment, IP)
 - Rate limiting to prevent spam
@@ -70,26 +63,26 @@ It is designed for organizations that need fast, auditable, and challengeable re
 ### 2.3 AI Adjudication + Hybrid Jury
 - GenLayer `prompt_non_comparative` for consensus-safe AI decisions
 - Structured JSON output (`decision`, `confidence`, `reasoning`)
-- Hybrid mode: AI recommendation + human resolver votes via `cast_human_vote`
+- Hybrid mode: AI recommendation + human votes via `cast_human_vote`
 - Minimum credibility threshold enforcement
 - Complete on-chain decision history
 
 ### 2.4 Challenge & Appeal System
 - Stake-based challenges with time-limited windows
 - Full second-instance Appeal layer
-- Automatic stake recording, management and withdrawal after finalization
-- Required stake forwarding enforced on-chain
+- Automatic stake recording and withdrawal after finalization
+- Required non-zero stake forwarding enforced on-chain
 
 ### 2.5 Finalization & Escrow
 - Time-locked challenge / appeal windows
-- On-chain-only finalization (`finalize_claim`)
+- Strictly on-chain finalization (`finalize_claim`)
 - Built-in escrow locked at claim creation
 - Automatic payout based on final decision + protocol fee
 - Cross-contract callback support
 
 ### 2.6 Access Control & Governance
-- Roles: Owner, Admin, Resolver, Senior Resolver
-- **Appointed Resolver** with persistent identity + endpoint authorization
+- Roles: Owner, Admin, Resolver, Senior Resolver, Appointed Resolver
+- Persistent Appointed Resolver with mandatory endpoint authorization
 - Two-step ownership transfer
 - Pause / Unpause
 - On-chain reputation system
@@ -100,148 +93,96 @@ It is designed for organizations that need fast, auditable, and challengeable re
 - Full audit-trail export (`get_audit_trail`)
 - Comprehensive events for external monitoring
 - Extensible template system
-- Versioned design (currently 4.2.0)
+- Versioned design (currently 4.4.0)
 
 ---
 
 ## 3. How It Works – Complete Workflow
 
-1. **Claim Creation**  
-   User/system creates a claim with parties, evidence, optional escrow, template and jurisdiction.
-
-2. **Evidence Collection**  
-   Parties can add more evidence while the claim is open / challenged / appealed.
-
-3. **Resolution**  
-   An authorized & staked Resolver calls `resolve_claim`.  
-   Contract fetches & scores evidence, runs AI adjudicator, and incorporates human votes (if any).
-
-4. **Challenge Period**  
-   Within the time window, parties can challenge by posting the required stake.
-
-5. **Appeal (Optional)**  
-   Formal appeal can be submitted with the required stake.
-
-6. **Human Review (Hybrid)**  
-   Resolvers cast votes exclusively via `cast_human_vote`.
-
-7. **Finalization (On-chain only)**  
-   After windows close, `finalize_claim` is called.  
-   When `require_human_votes_for_finalize = true`, sufficient human votes are mandatory.  
-   Escrow is released and the claim becomes final.
-
-8. **Archiving**  
-   Admins can archive old finalized claims.
+1. **Claim Creation** – Create claim with parties, evidence, optional escrow, template and jurisdiction.  
+2. **Evidence Collection** – Parties can add more evidence while the claim is open / challenged / appealed.  
+3. **Resolution** – Authorized & staked Resolver calls `resolve_claim`. Contract scores evidence and runs AI adjudicator.  
+4. **Challenge Period** – Parties can challenge by posting the required non-zero stake.  
+5. **Appeal (Optional)** – Formal appeal with required non-zero stake.  
+6. **Human Review (Hybrid)** – Resolvers cast votes exclusively via `cast_human_vote`.  
+7. **Finalization (On-chain only)** – After windows close, `finalize_claim` is called. Human votes are mandatory when required.  
+8. **Archiving** – Admins can archive old finalized claims.
 
 ---
 
-## 4. Focused Path Tests (against VeritasCourt.py)
+## 4. Focused Path Tests
 
-These tests demonstrate that every path requested by the steward completes successfully.
+See `tests/test_veritas_paths.py` for executable tests covering:
 
-### 1. Appointed Resolver + Endpoint Authorization
-- Deploy contract
-- Call `set_appointed_resolver(resolver_address, "https://your-endpoint.example.com")`
-- `get_appointed_resolver()` returns correct identity + endpoint
-- `is_authorized_resolver(resolver_address) == true`
-- Unauthorized address cannot call `resolve_claim`
-
-### 2. Challenge Stake Forwarding
-- `create_claim` → `resolve_claim`
-- `challenge` with value ≥ `min_challenge_stake`
-- Stake is persisted in `challenge_stakes`
-- `StakeRecorded` event is emitted
-
-### 3. Appeal Stake Forwarding
-- Same flow as challenge for the appeal path
-
-### 4. Human Vote + On-chain Finalization
-- `create_claim` (hybrid mode enabled)
-- `resolve_claim`
-- `cast_human_vote("VALID")`
-- After challenge window → `finalize_claim` succeeds and returns `{"success": true, "on_chain": true}`
-- Without enough votes → reverts (when `require_human_votes_for_finalize = true`)
-
-### 5. Resolver Stake Required
-- `add_resolver(non-owner)`
-- Attempt `resolve_claim` without stake → fails
-- `stake_as_resolver` (≥ `min_resolver_stake`) → `resolve_claim` succeeds
+1. Appointed Resolver + Endpoint Authorization  
+2. Challenge Stake Forwarding (non-zero)  
+3. Appeal Stake Forwarding (non-zero)  
+4. Human Vote + On-chain Finalization  
+5. Resolver Stake Requirement
 
 ---
 
-## 5. How to Test in GenLayer Studio (Step-by-step)
+## 5. How to Test in GenLayer Studio
 
-1. Open [GenLayer Studio](https://studio.genlayer.com)
-2. Create a new project or open an existing one
-3. Paste the full `VeritasCourt.py` (v4.0.0) and **Deploy**
-4. Execute the following calls in order:
+1. Deploy `VeritasCourt.py` (v4.4.0)
+2. Call `set_appointed_resolver(your_address, "https://api.github.com")` **first**
+3. `create_claim` → `resolve_claim` → `cast_human_vote` → `finalize_claim`
+4. Test `challenge` / `appeal` with value > 0
 
-| Step | Function                    | Notes / Parameters                                      |
-|------|-----------------------------|---------------------------------------------------------|
-| 1    | `set_appointed_resolver`    | Your address + a valid HTTPS endpoint                   |
-| 2    | `stake_as_resolver`         | Send value ≥ `min_resolver_stake` (default 1 GEN)       |
-| 3    | `create_claim`              | Fill required fields + at least one valid evidence URL  |
-| 4    | `resolve_claim`             | Use the returned `claim_id`                             |
-| 5    | `cast_human_vote`           | `claim_id` + `"VALID"` (or INVALID / PARTIALLY_VALID)   |
-| 6    | `challenge`                 | `claim_id` + reason + value ≥ `min_challenge_stake`     |
-| 7    | Wait for challenge window   | Or advance time in Studio if available                  |
-| 8    | `finalize_claim`            | Must succeed and return `on_chain: true`                |
-
-5. After each step, verify with view functions:
-   - `get_appointed_resolver`
-   - `get_config`
-   - `get_claim`
-   - `get_human_votes`
-   - `get_resolution`
-   - `is_authorized_resolver`
+Verify with:
+- `get_appointed_resolver`
+- `get_config`
+- `get_human_votes`
+- `get_resolution`
+- `is_authorized_resolver`
 
 ---
 
 ## 6. Security Model
 
-- All critical write functions protected by role-based access control
-- Contract can be paused instantly by admins
-- Only HTTPS URLs accepted for evidence
-- Mandatory stakes for challenges, appeals and resolvers
+- Role-based access control on all critical functions
+- Contract can be paused by admins
+- Only HTTPS evidence URLs accepted
+- Mandatory non-zero stakes for challenge, appeal and resolvers
 - Two-step ownership transfer
-- Rate limiting against spam
-- AI decisions always accompanied by a clear legal disclaimer
-- Full on-chain evidence and decision history (auditable)
+- Rate limiting
+- Clear legal disclaimer on every decision
+- Full on-chain audit trail
 - Human finalization path is strictly on-chain
 
 ---
 
-## 7. Roles & Permissions Summary
+## 7. Roles & Permissions
 
-| Role                | Key Permissions                                              |
-|---------------------|--------------------------------------------------------------|
-| Owner               | Full control + admin management                              |
-| Admin               | Pause, configuration, add/authorize resolvers, archive       |
-| Appointed Resolver  | Primary resolver identity + endpoint authorization           |
-| Resolver            | Resolve claims + cast human votes (must be authorized + staked) |
-| Senior Resolver     | Handle appeals                                               |
-| Plaintiff / Defendant | Create claims, add evidence, challenge, appeal             |
+| Role                  | Key Permissions                                      |
+|-----------------------|------------------------------------------------------|
+| Owner                 | Full control + admin management                      |
+| Admin                 | Pause, config, add/authorize resolvers, archive      |
+| Appointed Resolver    | Primary persistent identity + endpoint authorization |
+| Resolver              | Resolve claims + cast human votes (authorized + staked) |
+| Senior Resolver       | Handle appeals                                       |
+| Plaintiff / Defendant | Create claims, add evidence, challenge, appeal       |
 
 ---
 
 ## 8. Technical Notes
 
 - Built with GenLayer equivalence principles (`strict_eq` + `prompt_non_comparative`)
-- Deterministic timestamps via transaction context
-- All important state changes emit events
-- Storage organized for clarity and future extensibility
-- Versioned design (current: **4.0.0**)
-- Fully compliant with steward requirements for appointed resolver, stake forwarding, and on-chain human finalization
+- Deterministic timestamps
+- All important state changes emit events (with safe emission guards)
+- Storage organized for clarity and extensibility
+- Version: **4.4.0**
+- Fully compliant with steward requirements
 
 ---
 
 ## 9. Future-Proof Design
 
-- Modular template system for new industry packs
-- Reputation + staking systems for long-term incentive alignment
-- Callback hooks for enterprise system integration
-- Clear separation of first-instance and appeal layers
-- Hybrid human + AI approach remains adaptable as AI capabilities improve
+- Modular template system
+- Reputation + staking for long-term alignment
+- Callback hooks for enterprise integration
+- Clear first-instance vs appeal separation
+- Hybrid AI + Human approach ready for future AI improvements
 
 ---
 
