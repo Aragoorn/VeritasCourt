@@ -186,5 +186,6 @@ Verify with:
 - Hybrid AI + Human approach ready for future AI improvements
 
 ---
+Note: Finalization is strictly on-chain via cast_human_vote + finalize_claim. The backend (including any Prisma components) is only for optional UI/indexing and does not perform finalization.
 
 **Ready for production use and further roadmap development.**
