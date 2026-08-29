@@ -1,15 +1,15 @@
-# Veritas Court v4.4.0
+# Veritas Court v4.4.1
 Enterprise Hybrid AI + Human Claim & Dispute Resolution on GenLayer
 
 **Status:** Production-ready · Fully addresses Steward feedback (Aug 2026)  
 **Contract Source:** [`contracts/VeritasCourt.py`](./contracts/VeritasCourt.py)  
 **Focused Tests:** [`tests/test_veritas_paths.py`](./tests/test_veritas_paths.py)
 
-**Contract Address:** [0x7AcA451b2bfA278BDd9298c77aA929e1360Cc679](https://explorer-studio.genlayer.com/address/0x7AcA451b2bfA278BDd9298c77aA929e1360Cc679)
+**Contract Address:** [0xC3A6e79d9E6C828EE7f9A535679720593c9fb4C5](https://explorer-studio.genlayer.com/address/0xC3A6e79d9E6C828EE7f9A535679720593c9fb4C5)
 
 ---
 
-## Steward Feedback Compliance (v4.4.0)
+## Steward Feedback Compliance (v4.4.1)
 
 1. **Appointed resolver identity + matching endpoint authorization**  
    - Persistent non-ephemeral storage: `appointed_resolver`, `appointed_resolver_endpoint`, `resolver_endpoints`, `resolver_authorized`, `appointed_resolver_set`  
@@ -39,7 +39,7 @@ It functions as a transparent, AI-powered first-instance court with mandatory hy
 
 Designed for organizations that need fast, auditable, and challengeable resolution of commercial disputes, insurance claims, supply-chain issues, SaaS SLA breaches, employment matters, IP conflicts, and other B2B claims.
 
-**Current Version:** 4.4.0  
+**Current Version:** 4.4.1  
 **Status:** Investment-ready and suitable for real organizational deployment.
 
 ---
@@ -124,7 +124,7 @@ See `tests/test_veritas_paths.py` for executable tests covering:
 
 ## 5. How to Test in GenLayer Studio
 
-1. Deploy `VeritasCourt.py` (v4.4.0)
+1. Deploy `VeritasCourt.py` (v4.4.1)
 2. Call `set_appointed_resolver(your_address, "https://api.github.com")` **first**
 3. `create_claim` → `resolve_claim` → `cast_human_vote` → `finalize_claim`
 4. Test `challenge` / `appeal` with value > 0
@@ -171,7 +171,7 @@ Verify with:
 - Deterministic timestamps
 - All important state changes emit events (with safe emission guards)
 - Storage organized for clarity and extensibility
-- Version: **4.4.0**
+- Version: **4.4.1**
 - Fully compliant with steward requirements
 
 ---
