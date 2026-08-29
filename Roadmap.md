@@ -5,7 +5,7 @@ Realistic, Executable & Practical Plan (2026–2028)
 To become the standard on-chain dispute resolution layer for enterprises on GenLayer — trusted, legally usable, economically sustainable, and easy to integrate into real organizational workflows.
 
 ## Current Status (August 2026)
-- Smart contract **v4.4.0** is complete, hardened, and feature-rich
+- Smart contract **v4.4.1** is complete, hardened, and feature-rich
 - Core functionality fully implemented: AI adjudication, hybrid human jury, escrow, challenge/appeal, multi-party claims, industry templates, reputation, and strict on-chain finalization
 - Ready for internal testing and controlled pilot deployments
 
@@ -112,7 +112,7 @@ To become the standard on-chain dispute resolution layer for enterprises on GenL
 ---
 
 ## Immediate Next Actions (Next 30 Days)
-- Freeze current contract code as **v4.4.0**
+- Freeze current contract code as **v4.4.1**
 - Create detailed test plan
 - Set up proper repository structure and versioning
 - Begin internal testing and documentation
