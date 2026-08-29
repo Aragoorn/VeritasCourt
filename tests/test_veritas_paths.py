@@ -1,5 +1,5 @@
 """
-Focused Path Tests for VeritasCourt.py v4.4.0
+Focused Path Tests for VeritasCourt.py v4.4.1
 Steward compliance verification
 
 Covers the exact paths requested by the steward:
@@ -16,7 +16,7 @@ import json
 # ============================================================
 # Configuration – update these after deployment
 # ============================================================
-CONTRACT_ADDRESS = "0x7AcA451b2bfA278BDd9298c77aA929e1360Cc679"
+CONTRACT_ADDRESS = "0xC3A6e79d9E6C828EE7f9A535679720593c9fb4C5"
 OWNER_ADDRESS = "0xA1C6808b8f08D091e2826C9640Be302a310655E1"
 RESOLVER_ADDRESS = "0xA1C6808b8f08D091e2826C9640Be302a310655E1"          # usually same as owner
 TEST_ENDPOINT = "https://api.github.com"
@@ -69,7 +69,7 @@ def test_create_and_resolve(contract):
     try:
         claim_id = contract.create_claim(
             external_id="test-steward-v44-001",
-            title="Test Claim Steward Review v4.4.0",
+            title="Test Claim Steward Review v4.4.1",
             description="This claim verifies appointed resolver, non-zero stake forwarding, human vote via cast_human_vote and strict on-chain finalization as required by the steward.",
             evidence_urls="https://raw.githubusercontent.com/Aragoorn/VeritasCourt/main/README.md",
             plaintiff=OWNER_ADDRESS,
@@ -148,7 +148,7 @@ def test_basic_views(contract, claim_id):
 
 def run_all_tests(contract):
     print("=" * 65)
-    print("VeritasCourt v4.4.0 – Focused Path Tests")
+    print("VeritasCourt v4.4.1 – Focused Path Tests")
     print("Steward compliance verification")
     print("=" * 65)
 
@@ -180,7 +180,7 @@ def run_all_tests(contract):
 
 if __name__ == "__main__":
     print("Usage in GenLayer Studio:")
-    print("1. Deploy VeritasCourt.py (v4.4.0)")
+    print("1. Deploy VeritasCourt.py (v4.4.1)")
     print("2. Update OWNER_ADDRESS, RESOLVER_ADDRESS and CONTRACT_ADDRESS")
     print("3. Call set_appointed_resolver first")
     print("4. Then run the individual test functions or run_all_tests(contract)")
