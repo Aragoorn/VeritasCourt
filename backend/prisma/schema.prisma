@@ -11,7 +11,7 @@ enum UserRole {
   SUPER_ADMIN
   COMPANY_ADMIN
   COMPANY_USER
-  HUMAN_REVIEWER
+  RESOLVER          // جایگزین HUMAN_REVIEWER
   CLAIMANT
 }
 
@@ -19,28 +19,26 @@ enum ClaimStatus {
   DRAFT
   SUBMITTED
   AI_REVIEWING
-  AI_RESOLVED
+  RESOLVED          // به جای AI_RESOLVED
   CHALLENGED
   APPEALED
-  HUMAN_REVIEW
-  FINALIZED
-  REJECTED
+  FINALIZED         // فقط زمانی ست می‌شود که قرارداد finalize کرده باشد
   ARCHIVED
 }
 
 model User {
-  id            String        @id @default(cuid())
-  email         String        @unique
+  id            String     @id @default(cuid())
+  email         String     @unique
   passwordHash  String
   name          String?
-  role          UserRole      @default(CLAIMANT)
+  role          UserRole   @default(CLAIMANT)
+  walletAddress String?    // آدرس ولت resolver یا کاربر
   companyId     String?
-  company       Company?      @relation(fields: [companyId], references: [id])
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  company       Company?   @relation(fields: [companyId], references: [id])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
-  claimsCreated Claim[]       @relation("ClaimCreator")
-  reviews       HumanReview[]
+  claimsCreated Claim[]    @relation("ClaimCreator")
 }
 
 model Company {
@@ -55,23 +53,33 @@ model Company {
 }
 
 model Claim {
-  id              String         @id @default(cuid())
-  externalId      String?
-  title           String
-  description     String
-  status          ClaimStatus    @default(DRAFT)
-  genlayerClaimId String?
-  companyId       String
-  company         Company        @relation(fields: [companyId], references: [id])
-  creatorId       String
-  creator         User           @relation("ClaimCreator", fields: [creatorId], references: [id])
+  id                String      @id @default(cuid())
+  externalId        String?
+  title             String
+  description       String
+  status            ClaimStatus @default(DRAFT)
+  
+  // لینک به قرارداد (منبع حقیقت)
+  genlayerClaimId   String?     // claim_id در قرارداد
+  genlayerTxHash    String?     // آخرین تراکنش مرتبط
+  
+  companyId         String
+  company           Company     @relation(fields: [companyId], references: [id])
+  creatorId         String
+  creator           User        @relation("ClaimCreator", fields: [creatorId], references: [id])
 
-  evidence        Evidence[]
-  aiResolution    AiResolution?
-  humanReviews    HumanReview[]
+  evidence          Evidence[]
 
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  // فقط برای نمایش و ایندکس (نه منبع حقیقت)
+  lastDecision      String?     // آخرین تصمیم خوانده‌شده از قرارداد
+  lastConfidence    Int?
+  finalizedOnChain  Boolean     @default(false)
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([genlayerClaimId])
+  @@index([status])
 }
 
 model Evidence {
@@ -84,27 +92,4 @@ model Evidence {
   mimeType    String?
   uploadedBy  String
   createdAt   DateTime @default(now())
-}
-
-model AiResolution {
-  id             String   @id @default(cuid())
-  claimId        String   @unique
-  claim          Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
-  decision       String
-  confidence     Int
-  reasoning      String?
-  isReassessment Boolean  @default(false)
-  rawResponse    Json?
-  createdAt      DateTime @default(now())
-}
-
-model HumanReview {
-  id         String   @id @default(cuid())
-  claimId    String
-  claim      Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
-  reviewerId String
-  reviewer   User     @relation(fields: [reviewerId], references: [id])
-  decision   String
-  note       String?
-  createdAt  DateTime @default(now())
 }
