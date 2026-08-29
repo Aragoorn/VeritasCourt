@@ -1,6 +1,6 @@
-# Focused Path Tests – VeritasCourt.py v4.4.0
+# Focused Path Tests – VeritasCourt.py v4.4.1
 
-These tests demonstrate that every path requested by the steward completes successfully under the hardened rules of v4.4.0.
+These tests demonstrate that every path requested by the steward completes successfully under the hardened rules of v4.4.1.
 
 ### 1. Appointed Resolver + Endpoint Authorization (Non-Ephemeral)
 - [ ] Deploy contract
