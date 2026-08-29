@@ -19,7 +19,7 @@ Industry-specific templates and full audit trails
 Enterprise access control and compliance features
 
 Current Traction
-Fully implemented and hardened smart contract (v4.4.0)
+Fully implemented and hardened smart contract (v4.4.1)
 Comprehensive feature set live on GenLayer
 Clear technical architecture leveraging GenLayer’s unique AI + consensus capabilities
 Focused path tests and documentation completed
