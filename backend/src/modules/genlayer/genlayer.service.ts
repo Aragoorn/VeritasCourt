@@ -55,7 +55,7 @@ export class GenlayerService {
           params.description,
           params.evidenceUrls || '',
           params.plaintiff || '',
-          params.defendant || 'unknown',
+          params.defendant || '0x0000000000000000000000000000000000000001',
           params.templateId || 'general',
           params.jurisdiction || '',
           params.evidenceHashesJson || '[]',
@@ -118,13 +118,15 @@ export class GenlayerService {
     }
   }
 
-  async challengeClaim(claimId: string, reason: string, value: bigint = 0n) {
+  async challengeClaim(claimId: string, reason: string, value: bigint | string = 0n) {
     try {
+      const txValue = typeof value === 'string' ? BigInt(value) : value;
+
       const hash = await this.client.writeContract({
         address: this.contractAddress,
         functionName: 'challenge',
         args: [BigInt(claimId), reason],
-        value,
+        value: txValue,
       });
       await this.waitFinalized(hash);
       return { success: true, txHash: hash };
@@ -134,18 +136,36 @@ export class GenlayerService {
     }
   }
 
-  async appealClaim(claimId: string, reason: string, value: bigint = 0n) {
+  async appealClaim(claimId: string, reason: string, value: bigint | string = 0n) {
     try {
+      const txValue = typeof value === 'string' ? BigInt(value) : value;
+
       const hash = await this.client.writeContract({
         address: this.contractAddress,
         functionName: 'appeal',
         args: [BigInt(claimId), reason],
-        value,
+        value: txValue,
       });
       await this.waitFinalized(hash);
       return { success: true, txHash: hash };
     } catch (error) {
       this.logger.error('appealClaim error', error);
+      throw error;
+    }
+  }
+
+  async castHumanVote(claimId: string, vote: string) {
+    try {
+      const hash = await this.client.writeContract({
+        address: this.contractAddress,
+        functionName: 'cast_human_vote',
+        args: [BigInt(claimId), vote.toUpperCase()],
+        value: 0n,
+      });
+      await this.waitFinalized(hash);
+      return { success: true, txHash: hash };
+    } catch (error) {
+      this.logger.error('castHumanVote error', error);
       throw error;
     }
   }
@@ -159,28 +179,30 @@ export class GenlayerService {
         value: 0n,
       });
       await this.waitFinalized(hash);
-      return { success: true, txHash: hash };
+      return { success: true, txHash: hash, on_chain: true };
     } catch (error) {
       this.logger.error('finalizeClaim error', error);
       throw error;
     }
   }
 
-  async castHumanVote(claimId: string, vote: string) {
+  async setAppointedResolver(resolver: string, endpoint: string) {
     try {
       const hash = await this.client.writeContract({
         address: this.contractAddress,
-        functionName: 'cast_human_vote',
-        args: [BigInt(claimId), vote],
+        functionName: 'set_appointed_resolver',
+        args: [resolver, endpoint],
         value: 0n,
       });
       await this.waitFinalized(hash);
       return { success: true, txHash: hash };
     } catch (error) {
-      this.logger.error('castHumanVote error', error);
+      this.logger.error('setAppointedResolver error', error);
       throw error;
     }
   }
+
+  // ==================== View Methods ====================
 
   async getClaim(claimId: string) {
     const result = await this.client.readContract({
@@ -216,6 +238,15 @@ export class GenlayerService {
       args: [BigInt(claimId)],
     });
     return typeof result === 'string' ? JSON.parse(result || '[]') : result;
+  }
+
+  async getAppointedResolver() {
+    const result = await this.client.readContract({
+      address: this.contractAddress,
+      functionName: 'get_appointed_resolver',
+      args: [],
+    });
+    return typeof result === 'string' ? JSON.parse(result || '{}') : result;
   }
 
   async getAuditTrail(claimId: string) {
