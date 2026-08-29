@@ -5,12 +5,11 @@ Enterprise Hybrid AI + Human Claim & Dispute Resolution on GenLayer
 **Contract Source:** [`contracts/VeritasCourt.py`](./contracts/VeritasCourt.py)  
 **Focused Tests:** [`tests/test_veritas_paths.py`](./tests/test_veritas_paths.py)
 
-**Contract Address:**[`0x7AcA451b2bfA278BDd9298c77aA929e1360Cc679`](https://explorer-studio.genlayer.com/address/0x7AcA451b2bfA278BDd9298c77aA929e1360Cc679)
+**Contract Address:** [0x7AcA451b2bfA278BDd9298c77aA929e1360Cc679](https://explorer-studio.genlayer.com/address/0x7AcA451b2bfA278BDd9298c77aA929e1360Cc679)
 
 ---
 
-## (v4.4.0)
-
+## Steward Feedback Compliance (v4.4.0)
 
 1. **Appointed resolver identity + matching endpoint authorization**  
    - Persistent non-ephemeral storage: `appointed_resolver`, `appointed_resolver_endpoint`, `resolver_endpoints`, `resolver_authorized`, `appointed_resolver_set`  
@@ -20,7 +19,7 @@ Enterprise Hybrid AI + Human Claim & Dispute Resolution on GenLayer
 2. **Required stake forwarding for challenge & appeal**  
    - Hard floor on `min_challenge_stake` and `min_appeal_stake` (cannot be set to zero)  
    - Multiple asserts: `value > 0` + `value >= min_*`  
-   - Stakes are persisted on-chain and emit `StakeRecorded`  
+   - Stakes are recorded on-chain and emit `StakeRecorded`  
    - `min_resolver_stake` enforced for non-owner resolvers
 
 3. **Human review routed exclusively through `cast_human_vote` + on-chain finalization**  
@@ -71,14 +70,14 @@ Designed for organizations that need fast, auditable, and challengeable resoluti
 ### 2.4 Challenge & Appeal System
 - Stake-based challenges with time-limited windows
 - Full second-instance Appeal layer
-- Automatic stake recording and withdrawal after finalization
-- Required non-zero stake forwarding enforced on-chain
+- Stake recording and event emission on-chain
+- Required non-zero stake forwarding enforced
 
 ### 2.5 Finalization & Escrow
 - Time-locked challenge / appeal windows
 - Strictly on-chain finalization (`finalize_claim`)
-- Built-in escrow locked at claim creation
-- Automatic payout based on final decision + protocol fee
+- Escrow amounts are recorded at claim creation
+- Escrow and stake settlement can be handled post-finalization
 - Cross-contract callback support
 
 ### 2.6 Access Control & Governance
@@ -186,6 +185,8 @@ Verify with:
 - Hybrid AI + Human approach ready for future AI improvements
 
 ---
-Note: Finalization is strictly on-chain via cast_human_vote + finalize_claim. The backend (including any Prisma components) is only for optional UI/indexing and does not perform finalization.
+
+**Note:** Finalization is strictly on-chain via `cast_human_vote` + `finalize_claim`.  
+The backend (including any remaining Prisma components) is used only for optional UI and indexing and does **not** perform finalization.
 
 **Ready for production use and further roadmap development.**
