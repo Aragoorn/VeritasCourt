@@ -9,7 +9,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { ClaimsModule } from './modules/claims/claims.module';
 import { EvidenceModule } from './modules/evidence/evidence.module';
-import { ReviewModule } from './modules/review/review.module';
+// ReviewModule حذف شد
 import { GenlayerModule } from './modules/genlayer/genlayer.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { IntegrationModule } from './modules/integration/integration.module';
@@ -25,7 +25,7 @@ import { IntegrationModule } from './modules/integration/integration.module';
     UsersModule,
     ClaimsModule,
     EvidenceModule,
-    ReviewModule,
+    // ReviewModule,  ← حذف شد
     GenlayerModule,
     NotificationModule,
     IntegrationModule,
