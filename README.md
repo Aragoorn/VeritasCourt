@@ -1,34 +1,9 @@
 # Veritas Court v4.4.1
 Enterprise Hybrid AI + Human Claim & Dispute Resolution on GenLayer
 
-**Status:** Production-ready · Fully addresses Steward feedback (Aug 2026)  
-**Contract Source:** [`contracts/VeritasCourt.py`](./contracts/VeritasCourt.py)  
-**Focused Tests:** [`tests/test_veritas_paths.py`](./tests/test_veritas_paths.py)
 
 **Contract Address:** [0xC3A6e79d9E6C828EE7f9A535679720593c9fb4C5](https://explorer-studio.genlayer.com/address/0xC3A6e79d9E6C828EE7f9A535679720593c9fb4C5)
 
----
-
-## Steward Feedback Compliance (v4.4.1)
-
-1. **Appointed resolver identity + matching endpoint authorization**  
-   - Persistent non-ephemeral storage: `appointed_resolver`, `appointed_resolver_endpoint`, `resolver_endpoints`, `resolver_authorized`, `appointed_resolver_set`  
-   - `set_appointed_resolver(resolver, endpoint)` requires a valid non-empty HTTPS endpoint  
-   - `_can_resolve()` blocks all resolution until the appointed resolver is properly set and authorized
-
-2. **Required stake forwarding for challenge & appeal**  
-   - Hard floor on `min_challenge_stake` and `min_appeal_stake` (cannot be set to zero)  
-   - Multiple asserts: `value > 0` + `value >= min_*`  
-   - Stakes are recorded on-chain and emit `StakeRecorded`  
-   - `min_resolver_stake` enforced for non-owner resolvers
-
-3. **Human review routed exclusively through `cast_human_vote` + on-chain finalization**  
-   - `require_human_votes_for_finalize = true` by default  
-   - `finalize_claim` **reverts** if insufficient human votes exist  
-   - Explicit return fields: `"on_chain": true`, `"prisma_path_used": false`  
-   - No off-chain / Prisma finalization path remains
-
-4. **Focused path tests** included in `/tests`
 
 ---
 
@@ -110,35 +85,7 @@ Designed for organizations that need fast, auditable, and challengeable resoluti
 
 ---
 
-## 4. Focused Path Tests
-
-See `tests/test_veritas_paths.py` for executable tests covering:
-
-1. Appointed Resolver + Endpoint Authorization  
-2. Challenge Stake Forwarding (non-zero)  
-3. Appeal Stake Forwarding (non-zero)  
-4. Human Vote + On-chain Finalization  
-5. Resolver Stake Requirement
-
----
-
-## 5. How to Test in GenLayer Studio
-
-1. Deploy `VeritasCourt.py` (v4.4.1)
-2. Call `set_appointed_resolver(your_address, "https://api.github.com")` **first**
-3. `create_claim` → `resolve_claim` → `cast_human_vote` → `finalize_claim`
-4. Test `challenge` / `appeal` with value > 0
-
-Verify with:
-- `get_appointed_resolver`
-- `get_config`
-- `get_human_votes`
-- `get_resolution`
-- `is_authorized_resolver`
-
----
-
-## 6. Security Model
+## 4. Security Model
 
 - Role-based access control on all critical functions
 - Contract can be paused by admins
@@ -152,7 +99,7 @@ Verify with:
 
 ---
 
-## 7. Roles & Permissions
+## 5. Roles & Permissions
 
 | Role                  | Key Permissions                                      |
 |-----------------------|------------------------------------------------------|
@@ -165,7 +112,7 @@ Verify with:
 
 ---
 
-## 8. Technical Notes
+## 6. Technical Notes
 
 - Built with GenLayer equivalence principles (`strict_eq` + `prompt_non_comparative`)
 - Deterministic timestamps
@@ -176,17 +123,10 @@ Verify with:
 
 ---
 
-## 9. Future-Proof Design
+## 7. Future-Proof Design
 
 - Modular template system
 - Reputation + staking for long-term alignment
 - Callback hooks for enterprise integration
 - Clear first-instance vs appeal separation
 - Hybrid AI + Human approach ready for future AI improvements
-
----
-
-**Note:** Finalization is strictly on-chain via `cast_human_vote` + `finalize_claim`.  
-The backend (including any remaining Prisma components) is used only for optional UI and indexing and does **not** perform finalization.
-
-**Ready for production use and further roadmap development.**
