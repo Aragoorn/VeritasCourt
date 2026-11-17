@@ -1,7 +1,6 @@
 # Veritas Court v4.4.1
 Enterprise Hybrid AI + Human Claim & Dispute Resolution on GenLayer
 
-
 **Contract Address:** [0xC3A6e79d9E6C828EE7f9A535679720593c9fb4C5](https://explorer-studio.genlayer.com/address/0xC3A6e79d9E6C828EE7f9A535679720593c9fb4C5)
 
 ---
